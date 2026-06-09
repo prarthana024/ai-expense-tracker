@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Expense Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #1a1a2e; }
+    header { background: #4f46e5; color: white; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+    header h1 { font-size: 1.3rem; font-weight: 600; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 380px 1fr; gap: 1.5rem; }
+    .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151; }
+    .upload-area { border: 2px dashed #d1d5db; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s; margin-bottom: 1rem; }
+    .upload-area:hover, .upload-area.drag { border-color: #4f46e5; background: #f5f3ff; }
+    .upload-area p { font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem; }
+    .or-divider { text-align: center; color: #9ca3af; font-size: 0.8rem; margin: 0.75rem 0; }
+    textarea { width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.875rem; resize: vertical; min-height: 80px; }
+    textarea:focus { outline: none; border-color: #4f46e5; }
+    button.primary { width: 100%; padding: 0.75rem; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+    button.primary:hover { background: #4338ca; }
+    button.primary:disabled { background: #a5b4fc; cursor: not-allowed; }
+    .result-card { margin-top: 1rem; padding: 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; display: none; }
+    .result-card .merchant { font-weight: 600; font-size: 1rem; }
+    .result-card .amount { font-size: 1.4rem; font-weight: 700; color: #059669; }
+    .result-card .category { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e0e7ff; color: #4338ca; font-size: 0.8rem; margin-top: 4px; }
+    .filter-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .filter-btn { padding: 4px 12px; border-radius: 999px; border: 1px solid #e5e7eb; background: white; font-size: 0.8rem; cursor: pointer; }
+    .filter-btn.active { background: #4f46e5; color: white; border-color: #4f46e5; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+    .stat { background: #f9fafb; border-radius: 8px; padding: 0.75rem 1rem; }
+    .stat-label { font-size: 0.75rem; color: #6b7280; }
+    .stat-value { font-size: 1.2rem; font-weight: 600; color: #111827; }
+    .expense-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 400px; overflow-y: auto; }
+    .expense-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 1px solid #f3f4f6; border-radius: 8px; background: #fafafa; }
+    .expense-item:hover { background: #f5f3ff; }
+    .expense-icon { width: 36px; height: 36px; border-radius: 8px; background: #e0e7ff; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    .expense-info { flex: 1; min-width: 0; }
+    .expense-merchant { font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .expense-meta { font-size: 0.75rem; color: #6b7280; }
+    .expense-amount { font-weight: 600; color: #111827; flex-shrink: 0; }
+    .del-btn { background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 1rem; padding: 4px; border-radius: 4px; }
+    .del-btn:hover { color: #ef4444; background: #fee2e2; }
+    .empty-state { text-align: center; color: #9ca3af; padding: 2rem; font-size: 0.9rem; }
+    .loading { display: none; text-align: center; padding: 1rem; color: #6b7280; font-size: 0.85rem; }
+    .category-bars { margin-top: 0.5rem; }
+    .bar-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem; }
+    .bar-label { width: 120px; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; height: 8px; background: #f3f4f6; border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #4f46e5; border-radius: 4px; transition: width 0.4s; }
+    .bar-val { width: 60px; text-align: right; color: #6b7280; }
+    #preview-img { max-width: 100%; border-radius: 8px; margin-bottom: 0.75rem; display: none; }
+  </style>
+</head>
+<body>
+<header>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+  <h1>AI Expense Tracker</h1>
+</header>
+
+<div class="container">
+  <!-- Left: Upload -->
+  <div>
+    <div class="card">
+      <h2>Add Expense</h2>
+      <div class="upload-area" id="uploadArea">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drag & drop or click to upload receipt</p>
+        <input type="file" id="fileInput" accept="image/*" style="display:none"/>
+      </div>
+      <img id="preview-img" alt="Receipt preview"/>
+      <div class="or-divider">— or paste receipt text —</div>
+      <textarea id="textInput" placeholder="e.g. Starbucks - Grande Latte $5.40, Croissant $3.20. Total: $8.60"></textarea>
+      <button class="primary" id="analyzeBtn" onclick="analyzeReceipt()">✨ Analyze with AI</button>
+      <div class="loading" id="loading">Analyzing your receipt...</div>
+      <div class="result-card" id="resultCard"></div>
+    </div>
+  </div>
+
+  <!-- Right: Expenses -->
+  <div style="display:flex;flex-direction:column;gap:1rem;">
+    <div class="card">
+      <h2>Summary</h2>
+      <div class="summary-grid">
+        <div class="stat"><div class="stat-label">Total Spent</div><div class="stat-value" id="totalSpent">₹0.00</div></div>
+        <div class="stat"><div class="stat-label">Transactions</div><div class="stat-value" id="totalCount">0</div></div>
+      </div>
+      <div class="category-bars" id="categoryBars"></div>
+    </div>
+
+    <div class="card">
+      <h2>Expenses</h2>
+      <div class="filter-row" id="filterRow">
+        <button class="filter-btn active" onclick="filterExpenses('All')">All</button>
+        {% for cat in categories %}
+        <button class="filter-btn" onclick="filterExpenses('{{ cat }}')">{{ cat }}</button>
+        {% endfor %}
+      </div>
+      <div class="expense-list" id="expenseList">
+        <div class="empty-state">No expenses yet. Upload a receipt!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ICONS = {
+  "Food & Dining": "🍽️", "Transport": "🚗", "Shopping": "🛍️",
+  "Utilities": "⚡", "Healthcare": "🏥", "Entertainment": "🎬",
+  "Travel": "✈️", "Office Supplies": "📎", "Other": "📌"
+};
+
+let currentFilter = 'All';
+
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+const previewImg = document.getElementById('preview-img');
+
+uploadArea.addEventListener('click', () => fileInput.click());
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault(); uploadArea.classList.remove('drag');
+  if (e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; showPreview(e.dataTransfer.files[0]); }
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) showPreview(fileInput.files[0]); });
+
+function showPreview(file) {
+  const reader = new FileReader();
+  reader.onload = e => { previewImg.src = e.target.result; previewImg.style.display = 'block'; };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeReceipt() {
+  const btn = document.getElementById('analyzeBtn');
+  const loading = document.getElementById('loading');
+  const resultCard = document.getElementById('resultCard');
+
+  btn.disabled = true;
+  loading.style.display = 'block';
+  resultCard.style.display = 'none';
+
+  const formData = new FormData();
+  if (fileInput.files[0]) formData.append('receipt', fileInput.files[0]);
+  const text = document.getElementById('textInput').value.trim();
+  if (text) formData.append('text', text);
+
+  if (!fileInput.files[0] && !text) {
+    alert('Please upload a receipt image or paste receipt text.');
+    btn.disabled = false; loading.style.display = 'none';
+    return;
+  }
+
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.success) {
+      showResult(data.expense);
+      loadExpenses();
+      loadSummary();
+      fileInput.value = ''; document.getElementById('textInput').value = '';
+      previewImg.style.display = 'none';
+    } else {
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Failed to analyze receipt. Check your API key and try again.');
+  }
+
+  btn.disabled = false; loading.style.display = 'none';
+}
+
+function showResult(e) {
+  const card = document.getElementById('resultCard');
+  card.style.display = 'block';
+  card.innerHTML = `
+    <div class="merchant">${e.merchant || 'Unknown'}</div>
+    <div class="amount">${e.currency || '₹'}${Number(e.amount || 0).toFixed(2)}</div>
+    <div><span class="category">${e.category}</span></div>
+    ${e.date ? `<div style="font-size:0.8rem;color:#6b7280;margin-top:4px;">${e.date}</div>` : ''}
+    ${e.notes ? `<div style="font-size:0.8rem;color:#374151;margin-top:6px;">${e.notes}</div>` : ''}
+  `;
+}
+
+async function loadExpenses() {
+  const res = await fetch('/expenses?category=' + encodeURIComponent(currentFilter));
+  const data = await res.json();
+  const list = document.getElementById('expenseList');
+  document.getElementById('totalCount').textContent = data.expenses.length;
+
+  if (!data.expenses.length) {
+    list.innerHTML = '<div class="empty-state">No expenses yet. Upload a receipt!</div>';
+    return;
+  }
+
+  list.innerHTML = data.expenses.map(e => `
+    <div class="expense-item">
+      <div class="expense-icon">${ICONS[e.category] || '📌'}</div>
+      <div class="expense-info">
+        <div class="expense-merchant">${e.merchant || 'Unknown'}</div>
+        <div class="expense-meta">${e.category}${e.date ? ' · ' + e.date : ''}</div>
+      </div>
+      <div class="expense-amount">${e.currency || '₹'}${Number(e.amount || 0).toFixed(2)}</div>
+      <button class="del-btn" onclick="deleteExpense(${e.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function loadSummary() {
+  const res = await fetch('/summary');
+  const data = await res.json();
+  document.getElementById('totalSpent').textContent = '₹' + Number(data.total).toFixed(2);
+  const max = Math.max(...Object.values(data.by_category), 1);
+  const bars = document.getElementById('categoryBars');
+  bars.innerHTML = Object.entries(data.by_category)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, val]) => `
+      <div class="bar-row">
+        <div class="bar-label">${ICONS[cat] || ''} ${cat}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(val/max*100)}%"></div></div>
+        <div class="bar-val">₹${Number(val).toFixed(0)}</div>
+      </div>
+    `).join('');
+}
+
+async function deleteExpense(id) {
+  await fetch('/expenses/' + id, { method: 'DELETE' });
+  loadExpenses(); loadSummary();
+}
+
+function filterExpenses(cat) {
+  currentFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  loadExpenses();
+}
+
+loadExpenses(); loadSummary();
+</script>
+</body>
+</html>
