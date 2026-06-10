@@ -111,6 +111,9 @@ def summary():
         by_category[cat] = round(by_category.get(cat, 0) + e.get('amount', 0), 2)
     return jsonify({'by_category': by_category, 'total': round(sum(by_category.values()), 2)})
 
-if __name__ == '__main__':
-    os.makedirs('uploads', exist_ok=True)
-    app.run(debug=True)
+import os
+
+if __name__ == "__main__":
+    # Render provides a PORT environment variable. If not found, default to 5000.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
