@@ -68,7 +68,7 @@ Return ONLY the JSON, no conversational filler, no markdown wrapping."""
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview",
+            model="llama-3.2-11b-vision-instruct",
             messages=[{"role": "user", "content": groq_messages_content}]
         )
 
