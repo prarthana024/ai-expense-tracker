@@ -2,13 +2,33 @@ import os
 import base64
 import json
 from flask import Flask, render_template, request, jsonify
-import anthropic
+from groq import Groq
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+# Replace your old client.messages.create with this:
+response = client.chat.completions.create(
+    model="llama-3.2-11b-vision-preview",  # Groq's excellent vision model
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Analyze this receipt and return the total amount and items as JSON."},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{base64_image}" # Assumes your code converts image to base64
+                    }
+                }
+            ]
+        }
+    ]
+)
+
+# Update how you grab the text result:
+result_text = response.choices[0].message.content
 
 CATEGORIES = [
     "Food & Dining", "Transport", "Shopping", "Utilities",
